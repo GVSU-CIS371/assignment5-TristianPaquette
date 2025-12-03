@@ -1,17 +1,22 @@
 <template>
   <div>
-    <Beverage :isIced="beverageStore.currentTemp === 'Cold'" />
+    <Beverage
+      :isIced="store.currentTemp === 'Cold'"
+      :base="store.currentBase?.name || ''"
+      :creamer="store.currentCreamer?.name || ''"
+      :syrup="store.currentSyrup?.name || ''"
+    />
 
+    <!-- Temperature -->
     <ul>
       <li>
-        <template v-for="temp in beverageStore.temps" :key="temp">
+        <template v-for="temp in store.temps" :key="temp">
           <label>
             <input
               type="radio"
-              name="temperature"
-              :id="`r${temp}`"
+              name="temp"
               :value="temp"
-              v-model="beverageStore.currentTemp"
+              v-model="store.currentTemp"
             />
             {{ temp }}
           </label>
@@ -19,154 +24,112 @@
       </li>
     </ul>
 
-    <ul>
-      <li>
-        <template v-for="b in beverageStore.bases" :key="b.id">
-          <label>
-            <input
-              type="radio"
-              name="bases"
-              :id="`r${b.id}`"
-              :value="b"
-              v-model="beverageStore.currentBase"
-            />
-            {{ b.name }}
-          </label>
-        </template>
+    <!-- Bases -->
+    <ul class="options-row">
+      <li v-for="b in store.bases" :key="b.id">
+        <label>
+          <input type="radio" name="base" :value="b" v-model="store.currentBase" />
+          {{ b.name }}
+        </label>
       </li>
     </ul>
 
-    <ul>
-      <li>
-        <template v-for="s in beverageStore.syrups" :key="s.id">
-          <label>
-            <input
-              type="radio"
-              name="syrups"
-              :id="`r${s.id}`"
-              :value="s"
-              v-model="beverageStore.currentSyrup"
-            />
-            {{ s.name }}
-          </label>
-        </template>
+    <!-- Creamers -->
+    <ul class="options-row">
+      <li v-for="c in store.creamers" :key="c.id">
+        <label>
+          <input type="radio" name="creamer" :value="c" v-model="store.currentCreamer" />
+          {{ c.name }}
+        </label>
       </li>
     </ul>
 
-    <ul>
-      <li>
-        <template v-for="c in beverageStore.creamers" :key="c.id">
-          <label>
-            <input
-              type="radio"
-              name="creamers"
-              :id="`r${c.id}`"
-              :value="c"
-              v-model="beverageStore.currentCreamer"
-            />
-            {{ c.name }}
-          </label>
-        </template>
+    <!-- Syrups -->
+    <ul class="options-row">
+      <li v-for="s in store.syrups" :key="s.id">
+        <label>
+          <input type="radio" name="syrup" :value="s" v-model="store.currentSyrup" />
+          {{ s.name }}
+        </label>
       </li>
     </ul>
 
-    <div class="auth-row">
-      <button @click="withGoogle">Sign in with Google</button>
+    <!-- login -->
+    <div style="margin: 1rem 0">
+      <button v-if="!store.user" @click="store.withGoogle()">
+        Sign in with Google
+      </button>
+
+      <div v-else>
+        <p>Signed in as: <strong>{{ store.user.email }}</strong></p>
+        <button @click="store.signOut()">Sign Out</button>
+      </div>
     </div>
+
+    <!-- make beverage -->
     <input
-      v-model="beverageStore.currentName"
       type="text"
       placeholder="Beverage Name"
+      v-model="store.beverageName"
+      :disabled="!store.user"
     />
 
-    <button @click="handleMakeBeverage">🍺 Make Beverage</button>
+    <button @click="store.makeBeverage()" :disabled="!store.user">
+      🍺 Make Beverage
+    </button>
 
-    <p v-if="message" class="status-message">
-      {{ message }}
-    </p>
-  </div>
-
-  <div style="margin-top: 20px">
-    <template v-for="beverage in beverageStore.beverages" :key="beverage.id">
-      <input
-        type="radio"
-        :id="beverage.id"
-        :value="beverage"
-        v-model="beverageStore.currentBeverage"
-        @change="beverageStore.showBeverage()"
-      />
-      <label :for="beverage.id">{{ beverage.name }}</label>
-    </template>
+    <!-- Saved Beverages -->
+    <div id="beverage-container" v-if="store.user" style="margin-top:20px">
+      <h3>Your Saved Beverages</h3>
+      <ul>
+        <li v-for="bev in store.beverages" :key="bev.id">
+          <label>
+            <input
+              type="radio"
+              name="saved-bevs"
+              @change="store.showBeverage(bev)"
+            />
+            {{ bev.name }}
+          </label>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import Beverage from "./components/Beverage.vue";
 import { useBeverageStore } from "./stores/beverageStore";
+import { onMounted } from "vue";
 
-const beverageStore = useBeverageStore();
-beverageStore.init();
-
-const message = ref("");
-
-const showMessage = (txt: string) => {
-  message.value = txt;
-  setTimeout(() => {
-    message.value = "";
-  }, 5000);
-};
-
-const withGoogle = async () => {};
-
-const handleMakeBeverage = () => {
-  const txt = beverageStore.makeBeverage();
-  showMessage(txt);
-};
+const store = useBeverageStore();
+onMounted(() => {
+  store.init();
+});
 </script>
 
 <style lang="scss">
-body,
-html {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+html,
+body {
+  margin: 0;
+  padding: 0;
   height: 100%;
-  background-color: #6e4228;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: linear-gradient(to bottom, #6e4228 0%, #956f5a 100%);
 }
 
 ul {
   list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
 }
 
-.auth-row {
-  margin-top: 10px;
-  margin-bottom: 8px;
+.options-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.user-label {
-  color: #ffffff;
-  font-size: 0.9rem;
-}
-
-.hint {
-  margin-top: 4px;
-  color: #ffffff;
-  font-size: 0.85rem;
-}
-
-.status-message {
-  margin-top: 8px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  color: #856404;
-  font-size: 0.9rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
 }
 </style>
